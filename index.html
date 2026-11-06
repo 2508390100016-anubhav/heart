@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geometry Heart</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #14081a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    canvas {
+      display: block;
+      box-shadow: 0 0 50px rgba(224, 83, 117, 0.2);
+      border-radius: 12px;
+      max-width: 95vw;
+      max-height: 95vh;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="heartCanvas" width="752" height="1344"></canvas>
+
+  <script>
+    const canvas = document.getElementById("heartCanvas");
+    const ctx = canvas.getContext("2d");
+
+    const CX = 752 / 2;
+    const CY = 670;
+    const GOLD = "#d9b45a";
+    const GOLD_D = "#8a6420";
+    const PINK = "#f2a0ae";
+    const ROSE = "#e05375";
+    const WHITE = "#ffffff";
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function drawCircle(cx, cy, r, color, width = 1, fill = null) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+      ctx.lineWidth = width;
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    }
+
+    async function drawGlowDisc(cx, cy, maxR, steps = 24) {
+      for (let i = steps; i > 0; i--) {
+        const r = maxR * (i / steps);
+        const factor = (1 - (i / steps)) * 0.45;
+        const rc = Math.floor(20 + (180 - 20) * factor);
+        const gc = Math.floor(8 + (50 - 8) * factor);
+        const bc = Math.floor(26 + (90 - 26) * factor);
+        const color = `rgb(${rc}, ${gc}, ${bc})`;
+        drawCircle(cx, cy, r, color, 1, color);
+        await sleep(15);
+      }
+    }
+
+    async function drawVerticalResonance() {
+      ctx.lineWidth = 1;
+      for (let offset = -60; offset <= 60; offset += 15) {
+        ctx.strokeStyle = Math.abs(offset) % 30 === 0 ? PINK : GOLD_D;
+        ctx.beginPath();
+        for (let t = 0; t <= 1344; t += 12) {
+          const wave = Math.sin(t * 0.015) * (offset * 1.5) * Math.exp(-Math.pow((t - CY) / 450, 2));
+          const px = CX + wave;
+          const py = t;
+          if (t === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        await sleep(40);
+      }
+    }
+
+    async function drawFlowerOfLife(cx, cy, radius, stepR) {
+      ctx.lineWidth = 1;
+      for (let r = stepR; r <= radius; r += stepR) {
+        drawCircle(cx, cy, r, "#3d1f3b", 1);
+        await sleep(30);
+      }
+      const angles = [0, 1, 2, 3, 4, 5].map(i => i * (Math.PI / 3));
+      for (let d = stepR; d <= radius; d += stepR) {
+        for (const a of angles) {
+          const ox = cx + d * Math.cos(a);
+          const oy = cy + d * Math.sin(a);
+          drawCircle(ox, oy, stepR, "#4e2343", 1);
+          await sleep(20);
+        }
+      }
+    }
+
+    function heartPoint(t, scale = 1.0) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+      return { x: x * scale, y: y * scale };
+    }
+
+    async function drawHeart(cx, cy, scale, outlineColor, fillColor = null, width = 2) {
+      ctx.lineWidth = width;
+      ctx.strokeStyle = outlineColor;
+      const steps = 140;
+      const points = [];
+
+      for (let i = 0; i <= steps; i++) {
+        const t = i * (2 * Math.PI / steps);
+        const p = heartPoint(t, scale);
+        points.push({ x: cx + p.x, y: cy + p.y });
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+        ctx.stroke();
+        await sleep(8);
+      }
+      ctx.closePath();
+
+      if (fillColor) {
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+
+    async function drawMetatronStar(cx, cy, size) {
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = GOLD;
+      const nodes = [];
+      const numNodes = 12;
+      for (let i = 0; i < numNodes; i++) {
+        const ang = i * (2 * Math.PI / numNodes);
+        nodes.push({ x: cx + size * Math.cos(ang), y: cy + size * Math.sin(ang) });
+      }
+
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          ctx.beginPath();
+          ctx.moveTo(nodes[i].x, nodes[i].y);
+          ctx.lineTo(nodes[j].x, nodes[j].y);
+          ctx.stroke();
+          await sleep(15);
+        }
+      }
+    }
+
+    async function drawPlatonicGlyphs(cx, cy) {
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = GOLD;
+      const yCoords = [cy - 380, cy - 460, cy - 530, cy + 380, cy + 460, cy + 530];
+      for (const y of yCoords) {
+        drawCircle(cx, y, 12, GOLD, 1);
+        drawCircle(cx, y, 3, WHITE, 1, WHITE);
+        for (let a = 0; a < 360; a += 45) {
+          const rad = (a * Math.PI) / 180;
+          ctx.beginPath();
+          ctx.moveTo(cx + 14 * Math.cos(rad), y + 14 * Math.sin(rad));
+          ctx.lineTo(cx + 20 * Math.cos(rad), y + 20 * Math.sin(rad));
+          ctx.stroke();
+        }
+        await sleep(60);
+      }
+    }
+
+    async function animate() {
+      await drawGlowDisc(CX, CY, 320, 20);
+      await drawVerticalResonance();
+      await drawFlowerOfLife(CX, CY, 260, 38);
+
+      drawCircle(CX, CY, 260, GOLD, 2);
+      drawCircle(CX, CY, 275, GOLD_D, 1);
+
+      const shells = [
+        { s: 18, c: "#52142d", w: 3 },
+        { s: 17, c: "#781a3e", w: 3 },
+        { s: 16, c: "#af2655", w: 3 },
+        { s: 15.5, c: ROSE, w: 2 },
+        { s: 15, c: WHITE, w: 2 }
+      ];
+      for (const item of shells) {
+        await drawHeart(CX, CY - 20, item.s, item.c, null, item.w);
+      }
+
+      await drawHeart(CX, CY - 20, 14.5, "#420d24", "#330b1c", 2);
+      await drawMetatronStar(CX, CY + 10, 55);
+
+      await drawHeart(CX, CY + 15, 6, GOLD, "#631433", 2);
+      await drawMetatronStar(CX, CY + 25, 25);
+
+      await drawPlatonicGlyphs(CX, CY);
+    }
+
+    window.onload = () => {
+      animate();
+    };
+  </script>
+</body>
+</html>
